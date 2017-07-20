@@ -3,6 +3,7 @@ extern crate rand;
 
 use std::fs;
 use std::io;
+use std::time;
 
 use std::io::Read;
 use std::io::Seek;
@@ -42,14 +43,24 @@ fn main() {
 
     let mut buf = vec![0u8; 4096];
 
-    for _ in 0..1000000 {
-        let a_file: &mut AFile = rng.choose_mut(&mut files).unwrap();
-        let start = rng.gen_range(0, a_file.len);
-        a_file.inner.seek(SeekFrom::Start(start)).expect("seek");
-        match a_file.inner.read_exact(&mut buf) {
-            Err(ref e) if e.kind() == io::ErrorKind::UnexpectedEof => {},
-            Ok(()) => {},
-            _ => panic!(),
-        };
+    let mut read_bytes = 0u64;
+
+    let start = time::Instant::now();
+
+    while start.elapsed().as_secs() < 20 {
+        for _ in 0..50 {
+            let a_file: &mut AFile = rng.choose_mut(&mut files).unwrap();
+            let start = rng.gen_range(0, a_file.len);
+            a_file.inner.seek(SeekFrom::Start(start)).expect("seek");
+            match a_file.inner.read_exact(&mut buf) {
+                Err(ref e) if e.kind() == io::ErrorKind::UnexpectedEof => {},
+                Ok(()) => { read_bytes += buf.len() as u64; },
+                _ => panic!(),
+            };
+        }
     }
+
+    let end = start.elapsed();
+
+    println!("{} bytes in {}.{} seconds", read_bytes, end.as_secs(), end.subsec_nanos());
 }
